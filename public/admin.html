@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>予約管理｜E-nNS</title>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0e0c0a;--bg2:#17130f;--card:#201b16;--line:#3a2f25;--ink:#f4ece1;--mute:#a99a8a;--ember:#e8692c;--ok:#74d39a;--ng:#ef6b6b;--warn:#f0c060}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:"Zen Kaku Gothic New",sans-serif;line-height:1.6;padding-bottom:60px}
+.en{font-family:"Bebas Neue",sans-serif;letter-spacing:.05em}
+header{position:sticky;top:0;z-index:5;background:rgba(14,12,10,.95);border-bottom:1px solid var(--line);padding:12px 16px;display:flex;align-items:center;gap:12px}
+header h1{font-size:16px}header h1 .en{color:var(--ember);font-size:22px;margin-right:6px}
+header button{margin-left:auto}
+main{max-width:860px;margin:0 auto;padding:16px}
+button,select,input{font-family:inherit;font-size:15px}
+.btn{background:var(--ember);color:#fff;border:none;border-radius:10px;padding:10px 18px;cursor:pointer;font-weight:700}
+.btn.ghost{background:none;border:1px solid var(--line);color:var(--ink);font-weight:400}
+input,select{background:var(--bg2);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:9px 10px;width:100%}
+.login{max-width:360px;margin:80px auto;text-align:center}
+.login h2{margin-bottom:20px}
+.login input{margin-bottom:12px;text-align:center}
+.tabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:16px}
+.tabs button{flex-shrink:0;background:var(--bg2);border:1px solid var(--line);color:var(--mute);border-radius:999px;padding:7px 16px;cursor:pointer}
+.tabs button.on{background:var(--ink);color:var(--bg);font-weight:700}
+.kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px}
+.kpi div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}
+.kpi b{display:block;font-family:"Bebas Neue";font-size:32px;line-height:1}
+.kpi small{color:var(--mute);font-size:12px}
+.day-h{display:flex;justify-content:space-between;align-items:baseline;margin:22px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.day-h b{font-size:17px}.day-h span{color:var(--mute);font-size:13px}
+.day-h .bar{height:6px;border-radius:3px;background:var(--line);width:120px;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:8px}
+.day-h .bar i{display:block;height:100%;background:var(--ember)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px;display:grid;grid-template-columns:64px 1fr;gap:4px 14px}
+.card.cancel{opacity:.45}
+.card.consult{border-color:var(--warn)}
+.card .t{font-family:"Bebas Neue";font-size:28px;line-height:1;color:var(--ember)}
+.card .t small{display:block;font-family:"Zen Kaku Gothic New";font-size:12px;color:var(--ink)}
+.card h3{font-size:16px}
+.card h3 a{color:var(--mute);font-size:13px;margin-left:8px}
+.card .meta{font-size:13px;color:var(--mute)}
+.card .note{font-size:13px;background:var(--bg2);border-radius:8px;padding:6px 10px;margin-top:6px}
+.card .ctrl{grid-column:1/-1;display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:8px}
+.st-予約{color:var(--ink)}.st-確定{color:var(--ok)}.st-相談中{color:var(--warn)}
+.empty{text-align:center;color:var(--mute);padding:40px 0}
+.sec{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:28px}
+.sec h2{font-size:16px;margin-bottom:12px}
+.row{display:grid;grid-template-columns:1fr 1fr 1.4fr auto;gap:8px}
+@media(max-width:600px){.row{grid-template-columns:1fr 1fr}.card .ctrl{grid-template-columns:1fr}}
+.blk{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.blk button{background:none;border:1px solid var(--line);color:var(--mute);border-radius:6px;padding:3px 10px;cursor:pointer}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 20px;border-radius:999px;font-size:14px;opacity:0;transition:.3s;pointer-events:none}
+.toast.on{opacity:1}
+.demo{background:#5b4a1f;color:#ffd98a;font-size:12px;padding:6px 12px;border-radius:8px;margin-bottom:14px}
+</style>
+</head>
+<body>
+<header><h1><span class="en">E-nNS</span>予約管理</h1><button class="btn ghost" id="reload" hidden>更新</button></header>
+<main id="app"></main>
+<div class="toast" id="toast"></div>
+<script>
+const API_URL = ""; // index.html と同じ Google Apps Script のURL
+const SLOTS = ["18:00","18:30","19:00","19:30","20:00","20:30","21:00","21:30"];
+const DEMO = !API_URL;
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const pad = n => String(n).padStart(2, "0");
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const DOW = "日月火水木金土";
+let KEY = localStorage.getItem("enns_admin_key") || "";
+let data = { list: [], blocks: [], statuses: ["予約","相談中","確定","キャンセル","来店済","無断キャンセル"], capacity: 40 };
+let range = "upcoming";
+
+function toast(m) { const t = $("#toast"); t.textContent = m; t.classList.add("on"); setTimeout(() => t.classList.remove("on"), 1800); }
+
+async function call(body) {
+  if (DEMO) return demoCall(body);
+  const r = await fetch(API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ key: KEY, ...body }) });
+  return r.json();
+}
+// デモ：同じブラウザで index.html から入れた予約を表示
+function demoCall(b) {
+  const all = JSON.parse(localStorage.getItem("enns_rsv") || "[]");
+  const blocks = JSON.parse(localStorage.getItem("enns_blk") || "[]");
+  if (b.action === "list") return { ok: true, capacity: 40, statuses: data.statuses, blocks,
+    list: all.map(r => ({ ...r, status: r.status || (r.people >= 20 || r.plan === "shabu" ? "相談中" : "予約"),
+      plan: { course: "宴会コース", shabu: "しゃぶしゃぶ・特製鍋", seat: "席のみ" }[r.plan] || r.plan, beer: r.beerUp ? "あり" : "", memo: r.memo || "" }))
+      .filter(r => r.date >= b.from && r.date <= b.to).sort((x, y) => (x.date + x.time).localeCompare(y.date + y.time)) };
+  if (b.action === "update") { const r = all.find(x => x.id === b.id); if (b.status) r.status = b.status; if (typeof b.memo === "string") r.memo = b.memo; localStorage.setItem("enns_rsv", JSON.stringify(all)); return { ok: true }; }
+  if (b.action === "block") { blocks.push({ date: b.date, time: b.time, memo: b.memo }); localStorage.setItem("enns_blk", JSON.stringify(blocks)); return { ok: true }; }
+  if (b.action === "unblock") { localStorage.setItem("enns_blk", JSON.stringify(blocks.filter(x => !(x.date === b.date && x.time === b.time)))); return { ok: true }; }
+}
+
+function loginView(msg) {
+  $("#reload").hidden = true;
+  $("#app").innerHTML = `<div class="login"><h2>管理パスワード</h2>
+    <input id="key" type="password" placeholder="setup実行時に表示されたパスワード" value="">
+    <button class="btn" id="go" style="width:100%">ログイン</button><p style="color:var(--ng);margin-top:12px">${msg || ""}</p></div>`;
+  $("#go").onclick = () => { KEY = $("#key").value.trim(); localStorage.setItem("enns_admin_key", KEY); load(); };
+}
+
+function rangeDates() {
+  const t = new Date(), d = n => { const x = new Date(t); x.setDate(x.getDate() + n); return ymd(x); };
+  return { today: [d(0), d(0)], tomorrow: [d(1), d(1)], week: [d(0), d(6)], upcoming: [d(0), "9999-12-31"], past: [d(-30), d(-1)] }[range];
+}
+
+async function load() {
+  if (!DEMO && !KEY) return loginView();
+  const [from, to] = rangeDates();
+  const r = await call({ action: "list", from, to }).catch(() => ({ ok: false, error: "通信エラー" }));
+  if (!r.ok) { if (/パスワード/.test(r.error)) { localStorage.removeItem("enns_admin_key"); KEY = ""; return loginView(r.error); } return toast(r.error); }
+  data = r; render();
+}
+
+function render() {
+  $("#reload").hidden = false;
+  const active = data.list.filter(r => !["キャンセル","無断キャンセル"].includes(r.status));
+  const consult = data.list.filter(r => r.status === "相談中").length;
+  const byDate = {};
+  data.list.forEach(r => (byDate[r.date] = byDate[r.date] || []).push(r));
+  const tabs = [["today","今日"],["tomorrow","明日"],["week","今週"],["upcoming","今後すべて"],["past","過去30日"]];
+  $("#app").innerHTML = `
+    ${DEMO ? '<div class="demo">デモモード：このブラウザで index.html から入れた予約を表示しています</div>' : ""}
+    <div class="tabs">${tabs.map(([k, l]) => `<button data-r="${k}" class="${k === range ? "on" : ""}">${l}</button>`).join("")}</div>
+    <div class="kpi">
+      <div><b>${active.length}</b><small>組</small></div>
+      <div><b>${active.reduce((s, r) => s + Number(r.people), 0)}</b><small>名</small></div>
+      <div><b style="color:${consult ? "var(--warn)" : "inherit"}">${consult}</b><small>要連絡（相談中）</small></div>
+    </div>
+    ${Object.keys(byDate).length ? Object.entries(byDate).map(([date, rows]) => {
+      const d = new Date(date + "T00:00:00"), ppl = rows.filter(r => ["予約","確定","来店済"].includes(r.status)).reduce((s, r) => s + Number(r.people), 0);
+      return `<div class="day-h"><b>${d.getMonth()+1}/${d.getDate()}（${DOW[d.getDay()]}）</b><span>${rows.length}組 ${ppl}名<span class="bar"><i style="width:${Math.min(100, ppl / data.capacity * 100)}%"></i></span></span></div>` +
+        rows.map(card).join("");
+    }).join("") : '<div class="empty">この期間の予約はありません</div>'}
+    <div class="sec">
+      <h2>受付停止・臨時休業</h2>
+      <div class="row">
+        <input type="date" id="bDate" value="${ymd(new Date())}">
+        <select id="bTime"><option value="ALL">終日（臨時休業）</option>${SLOTS.map(s => `<option>${s}</option>`).join("")}</select>
+        <input id="bMemo" placeholder="メモ（貸切・仕入れ都合など）">
+        <button class="btn" id="bAdd">停止する</button>
+      </div>
+      <div style="margin-top:10px">${data.blocks.length ? data.blocks.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)).map(b =>
+        `<div class="blk"><span>${b.date} ${b.time === "ALL" ? "終日休業" : b.time + " の受付停止"} <small style="color:var(--mute)">${esc(b.memo)}</small></span><button data-ub="${b.date}|${b.time}">解除</button></div>`).join("") : '<p style="color:var(--mute);font-size:13px">停止中の枠はありません</p>'}</div>
+    </div>`;
+  document.querySelectorAll("[data-r]").forEach(b => b.onclick = () => { range = b.dataset.r; load(); });
+  document.querySelectorAll("[data-st]").forEach(s => s.onchange = async () => { const r = await call({ action: "update", id: s.dataset.st, status: s.value }); toast(r.ok ? "ステータスを更新しました" : r.error); load(); });
+  document.querySelectorAll("[data-memo]").forEach(i => i.onchange = async () => { const r = await call({ action: "update", id: i.dataset.memo, memo: i.value }); toast(r.ok ? "メモを保存しました" : r.error); });
+  document.querySelectorAll("[data-ub]").forEach(b => b.onclick = async () => { const [date, time] = b.dataset.ub.split("|"); await call({ action: "unblock", date, time }); toast("解除しました"); load(); });
+  $("#bAdd").onclick = async () => { const r = await call({ action: "block", date: $("#bDate").value, time: $("#bTime").value, memo: $("#bMemo").value }); toast(r.ok ? "受付を停止しました" : r.error); load(); };
+}
+
+function card(r) {
+  const cls = ["キャンセル","無断キャンセル"].includes(r.status) ? "cancel" : r.status === "相談中" ? "consult" : "";
+  return `<div class="card ${cls}">
+    <div class="t">${esc(r.time)}<small>${esc(r.people)}名</small></div>
+    <div>
+      <h3>${esc(r.name)} 様<a href="tel:${esc(r.tel)}">${esc(r.tel)}</a></h3>
+      <div class="meta">${esc(r.plan)}${r.beer ? "（生ビール飲み放題）" : ""}${r.purpose ? "／" + esc(r.purpose) : ""}／${esc(r.id)}</div>
+      ${r.note ? `<div class="note">${esc(r.note)}</div>` : ""}
+    </div>
+    <div class="ctrl">
+      <select data-st="${esc(r.id)}" class="st-${esc(r.status)}">${data.statuses.map(s => `<option ${s === r.status ? "selected" : ""}>${s}</option>`).join("")}</select>
+      <input data-memo="${esc(r.id)}" value="${esc(r.memo)}" placeholder="店メモ（席番号・連絡済みなど）">
+    </div>
+  </div>`;
+}
+
+$("#reload").onclick = load;
+load();
+</script>
+</body>
+</html>
